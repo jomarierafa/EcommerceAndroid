@@ -1,4 +1,4 @@
-package com.example.jomarie.kotlinpractice
+package com.example.jomarie.kotlinpractice.Model
 
 import com.google.gson.annotations.SerializedName
 
@@ -15,9 +15,9 @@ class Product {
     @SerializedName("productname")
     var productname: String? = null
 
-    @SerializedName("quantity_output")
-    var quantity_output: Int = 0
+    @SerializedName("price")
+    var price: String? = null
 
-    @SerializedName("price_output")
-    var price_output: String? = null
+    @SerializedName("image")
+    var image: String? = null
 }
