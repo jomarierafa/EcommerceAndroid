@@ -37,7 +37,7 @@
                         android:id="@+id/cartProduct"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
-                        android:layout_weight="1"/>
+                        android:layout_weight="10"/>
                     <TextView
                         android:id="@+id/removeProduct"
                         android:gravity="end"

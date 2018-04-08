@@ -1,6 +1,7 @@
 package com.example.jomarie.kotlinpractice.Activity
 
 import android.app.ProgressDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -26,6 +27,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate {
     private var txtTotalAmount : TextView? = null
     var list : ArrayList<CartProduct> = ArrayList<CartProduct>()
     var progressDialog: ProgressDialog? = null
+    var itemQDialog: DialogInterface? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,9 +43,10 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate {
 
         val btnCheckOut = findViewById<Button>(R.id.btnCheckOut)
         btnCheckOut.setOnClickListener {
-            val intent = Intent(this, Transaction::class.java)
-            startActivity(intent)
-            finish()
+            if(list.size < 0) {
+                startActivity<Transaction>()
+                finish()
+            }else{longToast("Cart is Empty")}
         }
     }
 
@@ -99,6 +102,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate {
             override fun onResponse(call: Call<ProductResponse>?, response: Response<ProductResponse>?) {
                 toast(response?.body()!!.response2!!)
                 callWebService()
+                this@Cart.itemQDialog?.dismiss()
             }
 
         })
@@ -116,7 +120,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate {
     }
 
     fun editItemQuantity(product: CartProduct, operation: String){
-        alert {
+        this.itemQDialog = alert {
             title = operation + " Quantity"
             customView {
                 verticalLayout {

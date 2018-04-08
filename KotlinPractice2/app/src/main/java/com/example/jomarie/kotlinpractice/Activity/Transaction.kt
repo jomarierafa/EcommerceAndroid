@@ -1,6 +1,8 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.AlertDialog
 import android.app.ProgressDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
@@ -12,6 +14,7 @@ import android.util.Patterns
 import android.view.View
 import android.widget.EditText
 import com.example.jomarie.kotlinpractice.ApiInterface
+import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
 import org.jetbrains.anko.*
 import org.jetbrains.anko.sdk25.coroutines.onClick
@@ -25,6 +28,8 @@ class Transaction : AppCompatActivity() {
     var txtemail        : TextInputLayout?  = null
     var txtcontact      : TextInputLayout?  = null
     var txtaddress      : TextInputLayout?  = null
+    var list: ArrayList<User> = ArrayList<User>()
+    var loginDialog : DialogInterface? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,12 +59,14 @@ class Transaction : AppCompatActivity() {
             }
         }
 
+        //login button
         val btnLogin = findViewById<View>(R.id.btnLogin)
         btnLogin.setOnClickListener{
             loginAlert()
         }
     }
 
+    //saving transaction
     fun addTransaction(name: String, email: String, contact: Int, address: String){
         val apiService = ApiInterface.create()
         val call = apiService.saveTransaction(name,email,contact,address)
@@ -82,20 +89,25 @@ class Transaction : AppCompatActivity() {
         val call = apiService.login(username, password)
         call.enqueue(object : Callback<ProductResponse>{
             override fun onFailure(call: Call<ProductResponse>?, t: Throwable?) {
-
+                toast("failed")
             }
 
             override fun onResponse(call: Call<ProductResponse>?, response: Response<ProductResponse>?) {
                 if(response?.body()!!.response!!){
-
+                    list = response!!.body()!!.userprofile!!
+                    for(user in list){
+                        addTransaction(user.name.toString(), user.email.toString() ,user.contact.toString().toInt(), user.address.toString())
+                    }
                 }else{
-                    toast(response?.body()!!.response!!.toString())
+                    longToast("Incorrect Username or Password")
                 }
+                progressDialog?.dismiss()
             }
 
         })
     }
 
+    //messagedialog
     fun showMessage(message: String){
         alert{
             alert(message) {
@@ -108,8 +120,9 @@ class Transaction : AppCompatActivity() {
         }
     }
 
+    //login Dialog
     fun loginAlert(){
-        alert {
+        this.loginDialog = alert {
             title = "Login Account"
             customView {
                 verticalLayout {
@@ -127,17 +140,18 @@ class Transaction : AppCompatActivity() {
                         inputType   = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_PASSWORD
                     }.lparams{ width = matchParent }
 
-                    textView("Dont Have An Account?"){
+                    textView("Don't Have An Account?"){
                         textColor = Color.BLUE
                         onClick {
-                            val intent = Intent(this@Transaction, Register::class.java)
-                            startActivity(intent)
+                            startActivity<Register>()
                         }
                     }
                     button("Login"){
                         onClick{
+                            progressDialog = indeterminateProgressDialog("Logging in..")
+                            progressDialog!!.show()
                             login(username.text.toString(), password.text.toString())
-                            longToast("" + username.text + password.text)
+                            this@Transaction.loginDialog?.dismiss()
                         }
                     }.lparams{width = matchParent }
                 }
@@ -145,6 +159,7 @@ class Transaction : AppCompatActivity() {
         }.show()
     }
 
+    //input validations
     private fun validateName(string: String): Boolean {
         if (string.isEmpty()) {
             txtname!!.error = "Enter Your Name"
@@ -156,7 +171,6 @@ class Transaction : AppCompatActivity() {
         txtname!!.isErrorEnabled = false
         return true
     }
-
     private fun validateEmail(string: String): Boolean{
         if (string.isEmpty()) {
             txtemail!!.error = "Enter Your Email Address"
@@ -168,7 +182,6 @@ class Transaction : AppCompatActivity() {
         txtemail!!.isErrorEnabled = false
         return true
     }
-
     private fun validateMobile(string: String): Boolean{
         if (string.isEmpty()) {
             txtcontact!!.error = "Enter Your Mobile Number"
@@ -181,7 +194,6 @@ class Transaction : AppCompatActivity() {
         txtcontact!!.isErrorEnabled = false
         return true
     }
-
     private fun validateAddress(string: String): Boolean{
         if(string.isEmpty()){
             txtaddress!!.error = "Enter Address"

@@ -2,6 +2,7 @@ package com.example.jomarie.kotlinpractice.Activity
 
 import com.example.jomarie.kotlinpractice.Model.CartProduct
 import com.example.jomarie.kotlinpractice.Model.Product
+import com.example.jomarie.kotlinpractice.Model.User
 import com.google.gson.annotations.SerializedName
 
 /**
@@ -19,5 +20,8 @@ class ProductResponse {
 
     @SerializedName("response2")
     var response2: String? = null
+
+    @SerializedName("userprofile")
+    var userprofile: ArrayList<User>? = null
 
 }

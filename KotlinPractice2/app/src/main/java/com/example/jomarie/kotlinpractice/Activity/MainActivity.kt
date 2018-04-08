@@ -136,8 +136,7 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
 
         val cart: MenuItem = menu.findItem(R.id.cart)
         cart.setOnMenuItemClickListener {
-            val intent = Intent(this, Cart::class.java)
-            startActivity(intent)
+            startActivity<Cart>()
             return@setOnMenuItemClickListener false
         }
         return super.onCreateOptionsMenu(menu)
