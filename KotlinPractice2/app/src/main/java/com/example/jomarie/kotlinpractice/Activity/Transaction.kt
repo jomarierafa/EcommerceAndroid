@@ -1,10 +1,11 @@
 package com.example.jomarie.kotlinpractice.Activity
 
-import android.app.AlertDialog
 import android.app.ProgressDialog
+import android.content.Context
 import android.content.DialogInterface
-import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Typeface
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.TextInputLayout
@@ -12,40 +13,51 @@ import android.text.InputType.TYPE_CLASS_TEXT
 import android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
 import android.util.Patterns
 import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import com.example.jomarie.kotlinpractice.ApiInterface
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.Disposable
+import io.reactivex.schedulers.Schedulers
 import org.jetbrains.anko.*
 import org.jetbrains.anko.sdk25.coroutines.onClick
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 class Transaction : AppCompatActivity() {
+    val apiService by lazy {
+        ApiInterface.create()
+    }
+
     var progressDialog  : ProgressDialog?   = null
     var txtname         : TextInputLayout?  = null
     var txtemail        : TextInputLayout?  = null
     var txtcontact      : TextInputLayout?  = null
     var txtaddress      : TextInputLayout?  = null
-    var list: ArrayList<User> = ArrayList<User>()
-    var loginDialog : DialogInterface? = null
+    var loginDialog     : DialogInterface?  = null
+
+    private var mUserInfoList: java.util.ArrayList<User>?    = null
+    private var sharedPreferences : SharedPreferences?       = null
+    private var disposable : Disposable?                     = null
+    var tf : Typeface? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_transaction)
 
-        txtname    = findViewById<View>(R.id.costumername) as TextInputLayout
-        txtemail   = findViewById<View>(R.id.costumeremail) as TextInputLayout
+        sharedPreferences = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
+        txtname    = findViewById<View>(R.id.costumername)    as TextInputLayout
+        txtemail   = findViewById<View>(R.id.costumeremail)   as TextInputLayout
         txtcontact = findViewById<View>(R.id.costumercontact) as TextInputLayout
         txtaddress = findViewById<View>(R.id.costumeraddress) as TextInputLayout
 
-        val name    = findViewById<View>(R.id.costumernamevalue) as EditText
-        val email   = findViewById<View>(R.id.costumeremailvalue) as EditText
+        val name    = findViewById<View>(R.id.costumernamevalue)    as EditText
+        val email   = findViewById<View>(R.id.costumeremailvalue)   as EditText
         val contact = findViewById<View>(R.id.costumercontactvalue) as EditText
         val address = findViewById<View>(R.id.costumeraddressvalue) as EditText
 
-        val btnSave = findViewById<View>(R.id.btnSaveTransac)
+        val btnSave = findViewById<Button>(R.id.btnSaveTransac)
         btnSave.setOnClickListener {
             if (
                     validateName(name.text.toString()) &&
@@ -60,67 +72,70 @@ class Transaction : AppCompatActivity() {
         }
 
         //login button
-        val btnLogin = findViewById<View>(R.id.btnLogin)
+        val btnLogin = findViewById<Button>(R.id.btnLogin)
         btnLogin.setOnClickListener{
             loginAlert()
         }
+
+        tf = Typeface.createFromAsset(assets, "fonts/Shenanigans.ttf")
+        btnSave.typeface  = tf
+        btnLogin.typeface = tf
     }
 
-    //saving transaction
+    //saving Transaction
     fun addTransaction(name: String, email: String, contact: Int, address: String){
-        val apiService = ApiInterface.create()
-        val call = apiService.saveTransaction(name,email,contact,address)
-        call.enqueue(object: Callback<ProductResponse>{
-            override fun onFailure(call: Call<ProductResponse>?, t: Throwable?) {
-                showMessage("Failed")
-            }
-
-            override fun onResponse(call: Call<ProductResponse>?, response: Response<ProductResponse>?) {
-                showMessage("Order Successfuly")
-                progressDialog!!.dismiss()
-
-            }
-
-        })
+        disposable = apiService.saveTransaction(name, email, contact, address)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {result-> transactionResponse(result)},
+                        {error-> toast("Error ${error.localizedMessage}")}
+                )
+    }
+    private fun transactionResponse(response : Response) {
+        showMessage("Order Successful")
+        progressDialog?.dismiss()
     }
 
+    //login
     fun login(username : String, password: String){
-        val apiService = ApiInterface.create()
-        val call = apiService.login(username, password)
-        call.enqueue(object : Callback<ProductResponse>{
-            override fun onFailure(call: Call<ProductResponse>?, t: Throwable?) {
-                toast("failed")
+        disposable = apiService.login(username, password)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {result-> loginResponse(result)},
+                        {error-> toast("Error ${error.localizedMessage}")}
+                )
+    }
+    private fun loginResponse(response : Response) {
+        if(response.response){
+            mUserInfoList = response.userprofile
+            for(user in mUserInfoList!!){
+                addTransaction(user.name, user.email ,user.contact.toString().toInt(), user.address)
+                val editor = sharedPreferences?.edit()
+                editor?.putBoolean("LOGGED", true)
+                editor?.putString("name", user.name)
+                editor?.putString("email", user.email)
+                editor?.putInt("contact", user.contact)
+                editor?.putString("address", user.address)
+                editor?.apply()
             }
-
-            override fun onResponse(call: Call<ProductResponse>?, response: Response<ProductResponse>?) {
-                if(response?.body()!!.response!!){
-                    list = response!!.body()!!.userprofile!!
-                    for(user in list){
-                        addTransaction(user.name.toString(), user.email.toString() ,user.contact.toString().toInt(), user.address.toString())
-                    }
-                }else{
-                    longToast("Incorrect Username or Password")
-                }
-                progressDialog?.dismiss()
-            }
-
-        })
+        }else{
+            longToast("Incorrect Username or Password")
+        }
+        progressDialog?.dismiss()
     }
 
-    //messagedialog
+    //Dialogs
     fun showMessage(message: String){
         alert{
             alert(message) {
                 yesButton {
-                    val intent = Intent(this@Transaction, MainActivity::class.java)
-                    startActivity(intent)
                     finish()
                 }
             }.show()
         }
     }
-
-    //login Dialog
     fun loginAlert(){
         this.loginDialog = alert {
             title = "Login Account"
@@ -147,11 +162,16 @@ class Transaction : AppCompatActivity() {
                         }
                     }
                     button("Login"){
+                        typeface = tf
                         onClick{
-                            progressDialog = indeterminateProgressDialog("Logging in..")
-                            progressDialog!!.show()
-                            login(username.text.toString(), password.text.toString())
-                            this@Transaction.loginDialog?.dismiss()
+                            if(username.text.isEmpty() || password.text.isEmpty()){
+                                toast("All fields are required")
+                            }else{
+                                progressDialog = indeterminateProgressDialog("Logging in..")
+                                progressDialog!!.show()
+                                login(username.text.toString(), password.text.toString())
+                                this@Transaction.loginDialog?.dismiss()
+                            }
                         }
                     }.lparams{width = matchParent }
                 }

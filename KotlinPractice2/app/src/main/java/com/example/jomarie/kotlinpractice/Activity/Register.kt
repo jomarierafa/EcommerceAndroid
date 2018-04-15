@@ -9,16 +9,23 @@ import android.view.View
 import android.widget.EditText
 import com.example.jomarie.kotlinpractice.ApiInterface
 import com.example.jomarie.kotlinpractice.R
-import org.jetbrains.anko.alert
-import org.jetbrains.anko.indeterminateProgressDialog
-import org.jetbrains.anko.yesButton
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.disposables.Disposable
+import io.reactivex.schedulers.Schedulers
+import org.jetbrains.anko.*
+import retrofit2.Retrofit
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class Register : AppCompatActivity() {
-    var progressDialog: ProgressDialog? = null
+    val apiService by lazy {
+        ApiInterface.create()
+    }
+
+    var progressDialog  : ProgressDialog? = null
+    var disposable      : Disposable?        = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,24 +47,22 @@ class Register : AppCompatActivity() {
         }
     }
 
-    fun registerUser(name: String, username: String, password: String, email: String, contact: Int, address: String ){
-        val apiService  = ApiInterface.create()
-        val call = apiService.registerUser(name,username,password,email,contact,address)
-        call.enqueue(object : Callback<ProductResponse>{
-            override fun onFailure(call: Call<ProductResponse>?, t: Throwable?) {
-                    showMessage("Something went Wrong!!")
-            }
-
-            override fun onResponse(call: Call<ProductResponse>?, response: Response<ProductResponse>?) {
-                if (response != null) {
-                    progressDialog!!.dismiss()
-                    showMessage(response.body().response2!!)
-                }
-            }
-
-        })
+    //register User
+    fun registerUser(name: String, username: String, password: String, email: String, contact: Int, address: String){
+        disposable = apiService.registerUser(name, username, password, email, contact, address)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {result-> registerResponse(result)},
+                        {error-> toast("Error ${error.localizedMessage}")}
+                )
+    }
+    fun registerResponse(response : Response){
+        progressDialog!!.dismiss()
+        showMessage(response.response2)
     }
 
+    //alertdialog
     fun showMessage(message: String){
         alert{
             alert(message) {

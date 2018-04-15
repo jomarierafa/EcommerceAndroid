@@ -10,6 +10,9 @@ import android.widget.TextView
 import com.example.jomarie.kotlinpractice.Model.CartProduct
 import com.example.jomarie.kotlinpractice.R
 import com.squareup.picasso.Picasso
+import android.graphics.Typeface
+
+
 
 
 /**
@@ -26,11 +29,11 @@ class CartAdapter(var cartproduct: ArrayList<CartProduct>, val delegate: Delegat
 
     override fun onBindViewHolder(holder: ViewHolder?, position: Int) {
         val product: CartProduct =  cartproduct[position]
-        holder?.cartProduct?.text = product.productname
+        holder?.cartProduct?.text = product.product
         holder?.cartAmount?.text = "$ " + product.totalamount
         holder?.cartQty?.text = product.qty.toString()
 
-        Picasso.with(holder?.itemView!!.context).load("http://192.168.15.84:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
+        Picasso.with(holder?.itemView!!.context).load("http://192.168.254.101:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
 
         holder?.btnAdd?.setOnClickListener(object : View.OnClickListener{
             override fun onClick(p0: View?) {

@@ -1,5 +1,6 @@
 package com.example.jomarie.kotlinpractice.Adapter
 
+import android.graphics.Typeface
 import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
@@ -19,19 +20,20 @@ class ProductAdapter(var productlist: ArrayList<Product>, val delegate: Delegate
     }
 
 
+
     override fun onBindViewHolder(p0: ViewHolder?, position: Int) {
         val product: Product =  productlist[position]
         p0?.textViewName?.text = product.productname
-        p0?.textViewCode?.text = product.productcode
         p0?.textViewPrice?.text = "$ " + product.price
 
-        Picasso.with(p0?.itemView!!.context).load("http://192.168.15.84:8080/Ecommerce/assets/images/" + product.image).into(p0?.productImage)
+        Picasso.with(p0?.itemView!!.context).load("http://192.168.254.101:8080/Ecommerce/assets/images/" + product.image).into(p0?.productImage)
 
-        p0?.btnAddToCart?.setOnClickListener(object : View.OnClickListener{
+        p0?.productCard?.setOnClickListener(object : View.OnClickListener{
             override fun onClick(p0: View?) {
                 delegate.onClickProduct(productlist.get(position))
             }
         })
+
 
     }
 
@@ -46,10 +48,11 @@ class ProductAdapter(var productlist: ArrayList<Product>, val delegate: Delegate
 
     class ViewHolder(itemView: View) :RecyclerView.ViewHolder(itemView){
         val textViewName    = itemView.findViewById<View>(R.id.textViewName) as TextView
-        val textViewCode    = itemView.findViewById<View>(R.id.textViewCode) as TextView
         val textViewPrice   = itemView.findViewById<View>(R.id.txtViewPrice) as TextView
-        val btnAddToCart    = itemView.findViewById<View>(R.id.btnAddtoCart) as ImageButton
         val productImage    = itemView.findViewById<View>(R.id.productImage) as ImageView
+        val productCard     = itemView.findViewById<View>(R.id.productCard)  as LinearLayout
+
+
     }
 
 

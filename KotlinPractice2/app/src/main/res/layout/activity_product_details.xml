@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:padding="10dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    tools:context="com.example.jomarie.kotlinpractice.Activity.ProductDetails">
+
+    <ImageView
+        android:id="@+id/detailsImage"
+        android:layout_weight="6"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:src="@mipmap/ic_launcher" />
+    <TextView
+        android:gravity="center"
+        android:id="@+id/detailsProduct"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fontFamily="@font/skranji"
+        android:text="ak74"
+        android:textSize="30sp" />
+    <TextView
+        android:gravity="center_horizontal"
+        android:id="@+id/textView4"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4"
+        android:fontFamily="@font/copse"
+        android:padding="10dp"
+        android:text="The AK-74 is an assault rifle developed in the early 1970s by Russian designer Mikhail Kalashnikov as the replacement for the earlier AKM (itself a refined version of the AK-47)"
+        android:textSize="20sp" />
+    <TextView
+        android:gravity="center"
+        android:id="@+id/detailsPrice"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:fontFamily="sans-serif-smallcaps"
+        android:text="$ 3.50"
+        android:textSize="30sp" />
+
+    <Button
+        android:id="@+id/btnAddtoCart2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:text="Add to Cart"
+        android:textSize="20sp"
+       />
+
+</LinearLayout>
