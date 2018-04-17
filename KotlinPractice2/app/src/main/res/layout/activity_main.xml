@@ -40,6 +40,7 @@
                         android:text="Rifle"
                         android:textSize="20sp" />
                     <android.support.v7.widget.RecyclerView
+                        android:layout_marginBottom="10dp"
                         android:id="@+id/rifleRecycler"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
@@ -50,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="5dp">
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="match_parent"
@@ -66,6 +67,7 @@
                         android:text="Grenade"
                         android:textSize="20sp" />
                     <android.support.v7.widget.RecyclerView
+                        android:layout_marginBottom="5dp"
                         android:id="@+id/grenadeRecycler"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"

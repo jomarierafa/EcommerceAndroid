@@ -1,5 +1,6 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.Activity
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.DialogInterface
@@ -39,6 +40,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
     private var mAdapter         : CartAdapter?              = null
     private var sharedPreferences: SharedPreferences?        = null
     private var disposable       : Disposable?               = null
+    private var user_id          : Int?                      = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,18 +49,18 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
         txtTotalAmount = findViewById<View>(R.id.totalAmount) as TextView
         initRecyclerView()
 
-        progressDialog = indeterminateProgressDialog("Loading Cart...")
-        progressDialog!!.show()
-        loadCart()
-
         sharedPreferences = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
+        user_id     = sharedPreferences?.getInt("id", 0)
         val logged  = sharedPreferences?.getBoolean("LOGGED", false)
         val name    = sharedPreferences?.getString("name", "")
         val email   = sharedPreferences?.getString("email", "")
-        val contact = sharedPreferences?.getInt("contact", 0)
+        val contact = sharedPreferences?.getString("contact", "")
         val address = sharedPreferences?.getString("address", "")
 
-        val btnCheckOut = findViewById<Button>(R.id.btnCheckOut)
+        progressDialog = indeterminateProgressDialog("Loading Cart...")
+        progressDialog!!.show()
+        loadCart()
+        
         btnCheckOut.setOnClickListener {
             if(mCartArrayList?.size!! > 0) {
                 if(logged!!){
@@ -77,14 +79,14 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
 
     private fun initRecyclerView() {
         cartRecycler.setHasFixedSize(true)
-        //val layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+
         val layoutManager : RecyclerView.LayoutManager = LinearLayoutManager(this)
         cartRecycler.layoutManager = layoutManager
     }
 
     //load cart data
-    fun loadCart(){
-        disposable = apiService.showCart()
+    private fun loadCart(){
+        disposable = apiService.showCart(user_id!!)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -107,19 +109,19 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
     }
 
     //remove product from cart
-    fun removeFromCart(product_id: Int){
+    private fun removeFromCart(product_id: Int){
         disposable = apiService.removeFromCart(product_id)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        {result-> loadCart()
-                                  showMessage("Product Remove Successful")},
+                        {result->   loadCart()
+                                    setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))},
                         {error-> toast("Error ${error.localizedMessage}")}
                 )
     }
 
     //add item or deduct
-    fun addItemQuantity(oldQty: Int, inputQty: Int, price: Float, code: String, stock: Int, product_id: Int, operation: String){
+    private fun addItemQuantity(oldQty: Int, inputQty: Int, price: Float, code: String, stock: Int, product_id: Int, operation: String){
         disposable = apiService.addItemQuantity(oldQty, inputQty, price, code, stock, product_id, operation)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -145,7 +147,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
     }
 
     //dialogs
-    fun editItemQuantity(product: CartProduct, operation: String){
+    private fun editItemQuantity(product: CartProduct, operation: String){
         this.itemQDialog = alert {
             title = operation + " Quantity"
             customView {
@@ -173,7 +175,7 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
             }
         }.show()
     }
-    fun showMessage(message: String){
+    private fun showMessage(message: String){
         alert{
             alert(message) {
                 yesButton {}
@@ -182,8 +184,8 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
     }
 
     //saving transaction if user is loggedin
-    fun addTransaction(name: String, email: String, contact: Int, address: String){
-        disposable = apiService.saveTransaction(name, email, contact, address)
+    private fun addTransaction(name: String, email: String, contact: String, address: String, cardno: Int, expiry: String, cvccode: Int ){
+        disposable = apiService.saveTransaction(user_id!!, name, email, contact, address, cardno, expiry, cvccode )
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -194,23 +196,25 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
                 )
     }
 
-    fun showDetails(name: String, email : String, contact : Int, address: String){
+    private fun showDetails(name: String, email : String, contact : String, address: String){
         this.detailsDialog = alert {
-            title = "Your Transaction Details"
+            title = "Payment Details"
             customView {
                 verticalLayout {
                     padding = dip(15)
-                    textView("Name: $name"){
+                    val cardno = editText{
+                        hint     = "card no."
                         textSize = sp(10).toFloat()
+                        inputType = TYPE_CLASS_NUMBER
                     }.lparams{ width = matchParent }
-                    textView("Email: $email") {
+                    val expiry = editText{
+                        hint      = "Expiry"
                         textSize  = sp(10).toFloat()
                     }.lparams{ width = matchParent }
-                    textView("Contact: $contact") {
+                    val cvccode = editText {
+                        hint      = "CVC Code"
                         textSize  = sp(10).toFloat()
-                    }.lparams{ width = matchParent }
-                    textView("Address: $address") {
-                        textSize  = sp(10).toFloat()
+                        inputType = TYPE_CLASS_NUMBER
                     }.lparams{ width = matchParent }
 
 
@@ -218,24 +222,29 @@ class Cart : AppCompatActivity(), CartAdapter.Delegate{
                         onClick{
                             progressDialog = indeterminateProgressDialog("Saving...")
                             progressDialog!!.show()
-                            addTransaction(name,email,contact,address)
+                            addTransaction(name,email,contact,address,cardno.text.toString().toInt(),expiry.text.toString(),cvccode.text.toString().toInt())
                             this@Cart.detailsDialog?.dismiss()
                         }
                     }.lparams{width = matchParent }
                     button("Switch Account"){
                         onClick{
                             sharedPreferences!!.edit().clear().apply()
-                            startActivity<Transaction>()
+                            setResult(Activity.RESULT_OK, intent.putExtra("msg", "switch"))
                             finish()
                         }
                     }.lparams{width = matchParent }
-
-
                 }
             }
         }.show()
     }
 
-
+    override fun onDestroy() {
+        setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))
+        super.onDestroy()
+    }
+    override fun onBackPressed() {
+        setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))
+        super.onBackPressed()
+    }
 
 }

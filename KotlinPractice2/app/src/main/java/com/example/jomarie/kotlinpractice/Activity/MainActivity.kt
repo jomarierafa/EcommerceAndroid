@@ -1,24 +1,27 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.AlertDialog
+import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
-import android.content.DialogInterface
+import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.support.v4.view.MenuItemCompat
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.text.InputType
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
+import android.view.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.RelativeLayout
 import android.widget.TextView
+import com.example.jomarie.kotlinpractice.Adapter.CartAdapter
 import com.example.jomarie.kotlinpractice.Adapter.ProductAdapter
 import com.example.jomarie.kotlinpractice.ApiInterface
+import com.example.jomarie.kotlinpractice.Model.CartProduct
 import com.example.jomarie.kotlinpractice.Model.Product
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
@@ -28,8 +31,8 @@ import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_cart.*
 import kotlinx.android.synthetic.main.activity_category_product.*
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.notification_update_count_layout.*
 import org.jetbrains.anko.*
-import org.jetbrains.anko.sdk25.coroutines.onClick
 import java.util.ArrayList
 
 class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
@@ -37,42 +40,56 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         ApiInterface.create()
     }
 
-    lateinit var mHandler     : Handler
-    lateinit var mRunnable    : Runnable
-    var mSwipeRefreshLayout   : SwipeRefreshLayout?         = null
-    private var loginDialog   : DialogInterface?            = null
+    lateinit var mHandler           : Handler
+    lateinit var mRunnable          : Runnable
+    private var mSwipeRefreshLayout : SwipeRefreshLayout?           = null
 
-    private var mUserInfoList: java.util.ArrayList<User>?   = null
-    private var sharedPreferences : SharedPreferences?      = null
-    private var progressDialog : ProgressDialog?            = null
-    private var mAndroidArrayList: ArrayList<Product>?      = null
-    private var mAdapter: ProductAdapter?                   = null
+    private var mUserInfoList       : java.util.ArrayList<User>?    = null
+    private var sharedPreferences   : SharedPreferences?            = null
+    private var progressDialog      : ProgressDialog?               = null
+    private var mAndroidArrayList   : ArrayList<Product>?           = null
+    private var mAdapter            : ProductAdapter?               = null
+    private var disposable          : Disposable?                   = null
 
-    var disposable : Disposable? = null
+    private var notification : RelativeLayout? = null
+    private var itemcount    : TextView?       = null
+    private var counter      : Int?            = 0
+    private var user_id      : Int?            = 0
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val msg = data?.getStringExtra("msg")
+        if(requestCode == 20 && data != null){
+            if(msg == "switch"){
+                loginAlert()
+            }else if(msg == "loadcounter"){
+                loadCartCounter()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mSwipeRefreshLayout = findViewById<View>(R.id.swipeRefreshLayout) as SwipeRefreshLayout
         initRecyclerView()
-        mHandler = Handler()
-
-        sharedPreferences = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
+        notification        = findViewById<RelativeLayout?>(R.id.badge_layout1)
+        mSwipeRefreshLayout = findViewById<View>(R.id.swipeRefreshLayout) as SwipeRefreshLayout
+        mHandler            = Handler()
+        sharedPreferences   = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
 
         progressDialog = indeterminateProgressDialog("Loading Data..")
         progressDialog?.setCancelable(false)
         progressDialog!!.show()
         loadProduct("","rifle", rifleRecycler)
         loadProduct("","grenade", grenadeRecycler)
+        loadCartCounter()
 
-        val txtRifle    = findViewById<TextView>(R.id.txtRifle)
         txtRifle.setOnClickListener {
-            startActivity<CategoryProduct>("category" to "rifle")
+            startActivityForResult<CategoryProduct>(20, "category" to "rifle")
         }
-        val txtGrenade  = findViewById<TextView>(R.id.txtGrenade)
         txtGrenade.setOnClickListener {
-            startActivity<CategoryProduct>("category" to "grenade")
+            startActivityForResult<CategoryProduct>(20, "category" to "grenade")
         }
 
         //swipeRefresh
@@ -88,10 +105,9 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
             )
 
         }
-
-
     }
 
+    //declaring recyclerviews
     private fun initRecyclerView() {
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         grenadeRecycler.setHasFixedSize(true)
@@ -102,18 +118,30 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         rifleRecycler.layoutManager = layoutManager2
     }
 
-    fun loadProduct(query : String, category : String, productrecycler: RecyclerView){
-        disposable = apiService.getProductDetails(query, category)
+    // count items in cart
+    private fun loadCartCounter(){
+        user_id    = sharedPreferences?.getInt("id", 0)
+        disposable = apiService.showCart(user_id!!)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        {result-> rifleResponse(result, productrecycler)},
+                        {result->   counter = result.size
+                                    invalidateOptionsMenu()},
                         {error-> toast("Error ${error.localizedMessage}")}
                 )
     }
 
-
-    private fun rifleResponse(productList: List<Product>, productrecycler : RecyclerView) {
+    //load the available product
+    private fun loadProduct(query : String, category : String, productrecycler: RecyclerView){
+        disposable = apiService.getProductDetails(query, category)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        {result-> response(result, productrecycler)},
+                        {error-> toast("Error ${error.localizedMessage}")}
+                )
+    }
+    private fun response(productList: List<Product>, productrecycler : RecyclerView) {
         mAndroidArrayList = ArrayList(productList)
         mAdapter = ProductAdapter(mAndroidArrayList!!, this)
 
@@ -121,86 +149,84 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         progressDialog?.dismiss()
     }
 
-
+    //product view
     override fun onClickProduct(product: Product) {
-        startActivity<ProductDetails>("id" to product.id, "product" to product.productname, "price" to product.price, "description" to product.description, "image" to product.image )
+        startActivityForResult<ProductDetails>(20,"id" to product.id, "product" to product.productname, "price" to product.price, "description" to product.description, "image" to product.image )
     }
 
+    //itemMenu
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        val inflater: MenuInflater = getMenuInflater()
+        val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.menu_main, menu)
-        return true
+        val cart : MenuItem = menu.findItem(R.id.cart)
+        MenuItemCompat.setActionView(cart, R.layout.notification_update_count_layout)
+        notification =  MenuItemCompat.getActionView(cart) as RelativeLayout
+
+        val cartView : View  = menu.findItem(R.id.cart).actionView
+        itemcount = cartView.findViewById(R.id.badge_notification_1)
+
+        itemcount?.text = counter.toString()
+        notification!!.setOnClickListener {
+            val int = Intent(this@MainActivity, Cart::class.java)
+            this.startActivityForResult(int, 20)
+        }
+        return super.onCreateOptionsMenu(menu)
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when(item.itemId){
             R.id.account -> {
                 val logged = sharedPreferences?.getBoolean("LOGGED", false)
-
                 if(logged!!){
-                    val id       = sharedPreferences?.getInt("id", 0)
-                    val name     = sharedPreferences?.getString("name", "")
-                    val email    = sharedPreferences?.getString("email","")
-                    val contact  = sharedPreferences?.getInt("contact", 0)
-                    val address  = sharedPreferences?.getString("address","")
-
-                    startActivity<AccountProfile>("id" to id, "name" to name, "email" to email, "contact" to contact, "address" to address)
+                   showAccountProfile()
                 }else{
                     loginAlert()
                 }
-                return true
-
-            }
-            R.id.cart ->{
-                startActivity<Cart>()
                 return true
             }
             else-> return super.onOptionsItemSelected(item)
         }
     }
 
-    fun loginAlert(){
-        this.loginDialog = alert {
-            title = "Login Account"
-            customView {
-                verticalLayout {
-                    padding = dip(15)
-                    val username = editText(){
-                        hint        = "username"
-                        textSize    = sp(10).toFloat()
-                        width       = dip(100)
-                    }.lparams{ width = matchParent }
-
-                    val password = editText() {
-                        hint        = "password"
-                        textSize    = sp(10).toFloat()
-                        width       = dip(100)
-                        inputType   = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                    }.lparams{ width = matchParent }
-
-                    textView("Don't Have An Account?"){
-                        textColor = Color.BLUE
-                        onClick {
-                            startActivity<Register>()
-                        }
-                    }
-                    button("Login"){
-                        onClick{
-                            if(username.text.isEmpty() || password.text.isEmpty()){
-                                toast("All fields are required")
-                            }else{
-                                progressDialog = indeterminateProgressDialog("Logging in..")
-                                progressDialog!!.show()
-                                login(username.text.toString(), password.text.toString())
-                                this@MainActivity.loginDialog?.dismiss()
-                            }
-                        }
-                    }.lparams{width = matchParent }
-                }
-            }
-        }.show()
+    private fun showAccountProfile(){
+        val id       = sharedPreferences?.getInt("id", 0)
+        val name     = sharedPreferences?.getString("name", "")
+        val email    = sharedPreferences?.getString("email","")
+        val contact  = sharedPreferences?.getString("contact", "")
+        val address  = sharedPreferences?.getString("address","")
+        val image    = sharedPreferences?.getString("image", "")
+        startActivity<AccountProfile>("id" to id, "name" to name, "email" to email, "contact" to contact, "address" to address, "image" to image)
     }
 
-    fun login(username : String, password: String){
+    //login
+    private fun loginAlert(){
+        val builder  : AlertDialog.Builder = AlertDialog.Builder(this)
+        val inflater : LayoutInflater = layoutInflater
+        val view : View = inflater.inflate(R.layout.login_dialog, null)
+        builder.setView(view)
+        val dialog : Dialog = builder.create()
+
+        val username = view.findViewById<EditText>(R.id.usernamevalue)
+        val password = view.findViewById<EditText>(R.id.passwordvalue)
+        val btnLogin = view.findViewById<Button>(R.id.btnLogin)
+        btnLogin.setOnClickListener {
+            if(username.text.isEmpty() || password.text.isEmpty()){
+                toast("All fields are required")
+            }else{
+                progressDialog = indeterminateProgressDialog("Logging in..")
+                progressDialog!!.show()
+                login(username.text.toString(), password.text.toString())
+                dialog.dismiss()
+            }
+        }
+
+        val signUp = view.findViewById<TextView>(R.id.signup)
+        signUp.setOnClickListener {
+            startActivity<Register>()
+        }
+
+        dialog.show()
+    }
+    private fun login(username : String, password: String){
         disposable = apiService.login(username, password)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -218,9 +244,11 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
                 editor?.putInt("id", user.id)
                 editor?.putString("name", user.name)
                 editor?.putString("email", user.email)
-                editor?.putInt("contact", user.contact)
+                editor?.putString("contact", user.contact)
                 editor?.putString("address", user.address)
+                editor?.putString("image", user.image)
                 editor?.apply()
+                showAccountProfile()
             }
         }else{
             longToast("Incorrect Username or Password")

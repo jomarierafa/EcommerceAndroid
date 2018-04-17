@@ -8,11 +8,12 @@
     tools:context="com.example.jomarie.kotlinpractice.Activity.AccountProfile">
     <LinearLayout
         android:orientation="vertical"
-        android:background="@color/colorAccent"
+        android:background="@color/colorPrimary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="4">
-        <ImageView
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/profilepic"
             android:layout_gravity="center"
             android:src="@drawable/ic_accountbox"
             android:layout_width="match_parent"
@@ -48,7 +49,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:digits="abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                android:enabled="true"
+                android:enabled="false"
                 android:hint="Name" />
         </android.support.design.widget.TextInputLayout>
         <android.support.design.widget.TextInputLayout

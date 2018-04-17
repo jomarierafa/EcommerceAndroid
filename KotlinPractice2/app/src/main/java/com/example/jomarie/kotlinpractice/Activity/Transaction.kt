@@ -1,5 +1,7 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.AlertDialog
+import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.DialogInterface
@@ -9,37 +11,38 @@ import android.graphics.Typeface
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.TextInputLayout
+import android.text.InputType
 import android.text.InputType.TYPE_CLASS_TEXT
 import android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
 import android.util.Patterns
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import com.example.jomarie.kotlinpractice.ApiInterface
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.android.synthetic.main.activity_transaction.*
 import org.jetbrains.anko.*
+import org.jetbrains.anko.db.INTEGER
 import org.jetbrains.anko.sdk25.coroutines.onClick
 
 class Transaction : AppCompatActivity() {
-    val apiService by lazy {
+    private val apiService by lazy {
         ApiInterface.create()
     }
 
-    var progressDialog  : ProgressDialog?   = null
-    var txtname         : TextInputLayout?  = null
-    var txtemail        : TextInputLayout?  = null
-    var txtcontact      : TextInputLayout?  = null
-    var txtaddress      : TextInputLayout?  = null
-    var loginDialog     : DialogInterface?  = null
+    private var progressDialog  : ProgressDialog?   = null
+    private var paymentDialog   : DialogInterface?  = null
 
-    private var mUserInfoList: java.util.ArrayList<User>?    = null
-    private var sharedPreferences : SharedPreferences?       = null
-    private var disposable : Disposable?                     = null
-    var tf : Typeface? = null
+    private var mUserInfoList       : java.util.ArrayList<User>?    = null
+    private var sharedPreferences   : SharedPreferences?            = null
+    private var disposable          : Disposable?                   = null
+    private var user_id             : Int                           = 0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,58 +50,48 @@ class Transaction : AppCompatActivity() {
         setContentView(R.layout.activity_transaction)
 
         sharedPreferences = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
-        txtname    = findViewById<View>(R.id.costumername)    as TextInputLayout
-        txtemail   = findViewById<View>(R.id.costumeremail)   as TextInputLayout
-        txtcontact = findViewById<View>(R.id.costumercontact) as TextInputLayout
-        txtaddress = findViewById<View>(R.id.costumeraddress) as TextInputLayout
+        user_id = sharedPreferences?.getInt("id", 0)!!
 
-        val name    = findViewById<View>(R.id.costumernamevalue)    as EditText
-        val email   = findViewById<View>(R.id.costumeremailvalue)   as EditText
-        val contact = findViewById<View>(R.id.costumercontactvalue) as EditText
-        val address = findViewById<View>(R.id.costumeraddressvalue) as EditText
-
-        val btnSave = findViewById<Button>(R.id.btnSaveTransac)
-        btnSave.setOnClickListener {
+        btnSaveTransac.setOnClickListener {
             if (
-                    validateName(name.text.toString()) &&
-                    validateEmail(email.text.toString()) &&
-                    validateMobile(contact.text.toString()) &&
-                    validateAddress(contact.text.toString())
+                    validateName(costumernamevalue.text.toString()) &&
+                    validateEmail(costumeremailvalue.text.toString()) &&
+                    validateMobile(costumercontactvalue.text.toString()) &&
+                    validateAddress(costumeraddressvalue.text.toString())
                     ) {
                 progressDialog = indeterminateProgressDialog("Saving....")
                 progressDialog!!.show()
-                addTransaction(name.text.toString(), email.text.toString(), contact.text.toString().toInt(), address.text.toString())
+                addTransaction( costumernamevalue.text.toString(),
+                                costumeremailvalue.text.toString(),
+                                costumercontactvalue.text.toString(),
+                                costumeraddressvalue.text.toString(),
+                                cardnovalue.text.toString().toInt(),
+                                expiryvalue.text.toString(),
+                                cvcvalue.text.toString().toInt())
             }
         }
 
         //login button
-        val btnLogin = findViewById<Button>(R.id.btnLogin)
         btnLogin.setOnClickListener{
             loginAlert()
         }
 
-        tf = Typeface.createFromAsset(assets, "fonts/Shenanigans.ttf")
-        btnSave.typeface  = tf
-        btnLogin.typeface = tf
     }
 
     //saving Transaction
-    fun addTransaction(name: String, email: String, contact: Int, address: String){
-        disposable = apiService.saveTransaction(name, email, contact, address)
+    private fun addTransaction(name: String, email: String, contact: String, address: String, cardno: Int, expiry: String, cvccode: Int){
+        disposable = apiService.saveTransaction(user_id, name, email, contact, address, cardno, expiry, cvccode)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        {result-> transactionResponse(result)},
+                        {result->
+                            progressDialog?.dismiss()
+                            showMessage("Order Successful")},
                         {error-> toast("Error ${error.localizedMessage}")}
                 )
     }
-    private fun transactionResponse(response : Response) {
-        showMessage("Order Successful")
-        progressDialog?.dismiss()
-    }
-
     //login
-    fun login(username : String, password: String){
+    private fun login(username : String, password: String){
         disposable = apiService.login(username, password)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -111,14 +104,15 @@ class Transaction : AppCompatActivity() {
         if(response.response){
             mUserInfoList = response.userprofile
             for(user in mUserInfoList!!){
-                addTransaction(user.name, user.email ,user.contact.toString().toInt(), user.address)
                 val editor = sharedPreferences?.edit()
                 editor?.putBoolean("LOGGED", true)
                 editor?.putString("name", user.name)
                 editor?.putString("email", user.email)
-                editor?.putInt("contact", user.contact)
+                editor?.putString("contact", user.contact)
                 editor?.putString("address", user.address)
+                editor?.putString("image", user.image)
                 editor?.apply()
+                showDetails(user.name, user.email,user.contact,user.address)
             }
         }else{
             longToast("Incorrect Username or Password")
@@ -127,7 +121,7 @@ class Transaction : AppCompatActivity() {
     }
 
     //Dialogs
-    fun showMessage(message: String){
+    private fun showMessage(message: String){
         alert{
             alert(message) {
                 yesButton {
@@ -136,44 +130,79 @@ class Transaction : AppCompatActivity() {
             }.show()
         }
     }
-    fun loginAlert(){
-        this.loginDialog = alert {
-            title = "Login Account"
+
+    private fun loginAlert(){
+        val builder  : AlertDialog.Builder = AlertDialog.Builder(this)
+        val inflater : LayoutInflater = layoutInflater
+        val view : View = inflater.inflate(R.layout.login_dialog, null)
+        builder.setView(view)
+        val dialog : Dialog = builder.create()
+
+        val username = view.findViewById<EditText>(R.id.usernamevalue)
+        val password = view.findViewById<EditText>(R.id.passwordvalue)
+        val btnLogin = view.findViewById<Button>(R.id.btnLogin)
+        btnLogin.setOnClickListener {
+            if(username.text.isEmpty() || password.text.isEmpty()){
+                toast("All fields are required")
+            }else{
+                if(username.text.isEmpty() || password.text.isEmpty()){
+                    toast("All fields are required")
+                }else{
+                    progressDialog = indeterminateProgressDialog("Logging in..")
+                    progressDialog!!.show()
+                    login(username.text.toString(), password.text.toString())
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        val signUp = view.findViewById<TextView>(R.id.signup)
+        signUp.setOnClickListener {
+            startActivity<Register>()
+        }
+
+        dialog.show()
+    }
+
+    private fun showDetails(name: String, email : String, contact : String, address: String){
+        this.paymentDialog = alert {
+            isCancelable = false
+            title = "Payment Details"
             customView {
                 verticalLayout {
                     padding = dip(15)
-                    val username = editText(){
-                        hint        = "username"
-                        textSize    = sp(10).toFloat()
-                        width       = dip(100)
+                    val cardno = editText{
+                        hint     = "card no."
+                        textSize = sp(10).toFloat()
+                        inputType = InputType.TYPE_CLASS_NUMBER
+                    }.lparams{ width = matchParent }
+                    val expiry = editText{
+                        hint      = "Expiry"
+                        textSize  = sp(10).toFloat()
+                    }.lparams{ width = matchParent }
+                    val cvccode = editText {
+                        hint      = "CVC Code"
+                        textSize  = sp(10).toFloat()
+                        inputType = InputType.TYPE_CLASS_NUMBER
                     }.lparams{ width = matchParent }
 
-                    val password = editText() {
-                        hint        = "password"
-                        textSize    = sp(10).toFloat()
-                        width       = dip(100)
-                        inputType   = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_PASSWORD
-                    }.lparams{ width = matchParent }
-
-                    textView("Don't Have An Account?"){
-                        textColor = Color.BLUE
-                        onClick {
-                            startActivity<Register>()
-                        }
-                    }
-                    button("Login"){
-                        typeface = tf
+                    button("Submit"){
                         onClick{
-                            if(username.text.isEmpty() || password.text.isEmpty()){
-                                toast("All fields are required")
-                            }else{
-                                progressDialog = indeterminateProgressDialog("Logging in..")
-                                progressDialog!!.show()
-                                login(username.text.toString(), password.text.toString())
-                                this@Transaction.loginDialog?.dismiss()
-                            }
+                            progressDialog = indeterminateProgressDialog("Saving...")
+                            progressDialog!!.show()
+                            addTransaction(name,email,contact,address,cardno.text.toString().toInt(),expiry.text.toString(),cvccode.text.toString().toInt())
+                            this@Transaction.paymentDialog?.dismiss()
                         }
                     }.lparams{width = matchParent }
+                    button("Switch Account"){
+                        onClick{
+                            sharedPreferences!!.edit().clear().apply()
+                            this@Transaction.paymentDialog?.dismiss()
+                            loginAlert()
+                        }
+                    }.lparams{width = matchParent }
+
+
                 }
             }
         }.show()
@@ -182,44 +211,44 @@ class Transaction : AppCompatActivity() {
     //input validations
     private fun validateName(string: String): Boolean {
         if (string.isEmpty()) {
-            txtname!!.error = "Enter Your Name"
+            costumername!!.error = "Enter Your Name"
             return false
         } else if (string.length > 50) {
-            txtname!!.error = "Maximum 50 Characters"
+            costumername!!.error = "Maximum 50 Characters"
             return false
         }
-        txtname!!.isErrorEnabled = false
+        costumername!!.isErrorEnabled = false
         return true
     }
     private fun validateEmail(string: String): Boolean{
         if (string.isEmpty()) {
-            txtemail!!.error = "Enter Your Email Address"
+            costumeremail!!.error = "Enter Your Email Address"
             return false
         } else if (!Patterns.EMAIL_ADDRESS.matcher(string).matches()) {
-            txtemail!!.error = "Enter A Valid Email Address"
+            costumeremail!!.error = "Enter A Valid Email Address"
             return false
         }
-        txtemail!!.isErrorEnabled = false
+        costumeremail!!.isErrorEnabled = false
         return true
     }
     private fun validateMobile(string: String): Boolean{
         if (string.isEmpty()) {
-            txtcontact!!.error = "Enter Your Mobile Number"
+            costumercontact!!.error = "Enter Your Mobile Number"
             return false
         }
         if (string.length != 10) {
-            txtcontact!!.error = "Enter A Valid Mobile Number"
+            costumercontact!!.error = "Enter A Valid Mobile Number"
             return false
         }
-        txtcontact!!.isErrorEnabled = false
+        costumercontact!!.isErrorEnabled = false
         return true
     }
     private fun validateAddress(string: String): Boolean{
         if(string.isEmpty()){
-            txtaddress!!.error = "Enter Address"
+            costumeraddress!!.error = "Enter Address"
             return false
         }
-        txtaddress!!.isErrorEnabled = false
+        costumeraddress!!.isErrorEnabled = false
         return true;
     }
 

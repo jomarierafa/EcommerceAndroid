@@ -26,7 +26,7 @@ class ProductAdapter(var productlist: ArrayList<Product>, val delegate: Delegate
         p0?.textViewName?.text = product.productname
         p0?.textViewPrice?.text = "$ " + product.price
 
-        Picasso.with(p0?.itemView!!.context).load("http://192.168.254.101:8080/Ecommerce/assets/images/" + product.image).into(p0?.productImage)
+        Picasso.with(p0?.itemView!!.context).load("http://192.168.1.124:8080/Ecommerce/assets/images/" + product.image).into(p0?.productImage)
 
         p0?.productCard?.setOnClickListener(object : View.OnClickListener{
             override fun onClick(p0: View?) {

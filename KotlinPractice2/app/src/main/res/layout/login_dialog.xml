@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:layout_margin="10dp">
+    android:padding="10dp">
     <TextView
         android:textSize="20sp"
         android:text="Login Account"
@@ -39,7 +39,7 @@
     </android.support.design.widget.TextInputLayout>
     <TextView
         android:id="@+id/signup"
-        android:textColor="@android:color/holo_blue_bright"
+        android:textColor="@android:color/holo_blue_dark"
         android:text="Don't have an Account?"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

@@ -33,7 +33,7 @@ class CartAdapter(var cartproduct: ArrayList<CartProduct>, val delegate: Delegat
         holder?.cartAmount?.text = "$ " + product.totalamount
         holder?.cartQty?.text = product.qty.toString()
 
-        Picasso.with(holder?.itemView!!.context).load("http://192.168.254.101:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
+        Picasso.with(holder?.itemView!!.context).load("http://192.168.1.124:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
 
         holder?.btnAdd?.setOnClickListener(object : View.OnClickListener{
             override fun onClick(p0: View?) {

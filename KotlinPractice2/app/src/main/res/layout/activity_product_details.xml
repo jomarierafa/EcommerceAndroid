@@ -26,7 +26,7 @@
         android:textSize="30sp" />
     <TextView
         android:gravity="center_horizontal"
-        android:id="@+id/textView4"
+        android:id="@+id/detailsDescription"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="4"

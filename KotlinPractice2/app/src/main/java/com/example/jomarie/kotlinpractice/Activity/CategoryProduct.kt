@@ -1,5 +1,6 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.Activity
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.DialogInterface
@@ -141,6 +142,11 @@ class CategoryProduct : AppCompatActivity(), ProductAdapter.Delegate {
         }
 
         return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onBackPressed() {
+        setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))
+        super.onBackPressed()
     }
 
 

@@ -26,10 +26,12 @@ interface ApiInterface {
 
     @FormUrlEncoded
     @POST("costumer/addToCart")
-    fun addToCart(@Field("product_id") product_id : Int) : Observable<Response>
+    fun addToCart(@Field("product_id") product_id : Int,
+                  @Field("user_id")    user_id    : Int) : Observable<Response>
 
-    @GET("costumer/showCart")
-    fun showCart(): Observable<List<CartProduct>>
+    @FormUrlEncoded
+    @POST("costumer/showCart")
+    fun showCart(@Field("user_id") user_id: Int): Observable<List<CartProduct>>
 
     @FormUrlEncoded
     @POST("costumer/removeFromCart")
@@ -47,10 +49,14 @@ interface ApiInterface {
 
     @FormUrlEncoded
     @POST("costumer/addTransaction")
-    fun saveTransaction(@Field("name")     name    : String,
+    fun saveTransaction(@Field("user_id")  user_id : Int,
+                        @Field("name")     name    : String,
                         @Field("email")    email   : String,
-                        @Field("contact")  contact : Int,
-                        @Field("address")  address : String) : Observable<Response>
+                        @Field("contact")  contact : String,
+                        @Field("address")  address : String,
+                        @Field("cardno")   cardno  : Int,
+                        @Field("expiry")   expiry  : String,
+                        @Field("cvccode")  cvccode : Int) : Observable<Response>
 
     @FormUrlEncoded
     @POST("costumer/registerUser")
@@ -59,7 +65,8 @@ interface ApiInterface {
                      @Field("password")    password: String,
                      @Field("email")       email   : String,
                      @Field("contact")     contact : Int,
-                     @Field("address")     address : String) :Observable<Response>
+                     @Field("address")     address : String,
+                     @Field("image")       image   : String) :Observable<Response>
 
     @FormUrlEncoded
     @POST("costumer/login")
@@ -71,12 +78,12 @@ interface ApiInterface {
     fun updateProfile(@Field("id")      username : Int,
                       @Field("name")    password : String,
                       @Field("email")   email : String,
-                      @Field("contact") contact : Int,
+                      @Field("contact") contact : String,
                       @Field("address") address: String) : Observable<Response>
 
 
     companion object Factory {
-        val BASE_URL = "http://192.168.254.101:8080/Ecommerce/"
+        val BASE_URL = "http://192.168.1.124:8080/Ecommerce/"
         fun create(): ApiInterface {
             val retrofit = Retrofit.Builder()
                     .baseUrl(BASE_URL)

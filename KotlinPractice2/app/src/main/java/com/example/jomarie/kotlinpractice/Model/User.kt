@@ -1,5 +1,7 @@
 package com.example.jomarie.kotlinpractice.Model
 
+import android.widget.ImageView
+
 /**
  * Created by jomarie on 4/6/2018.
  */
@@ -9,6 +11,7 @@ data class User (
     var username: String,
     var password: String,
     var email   : String,
-    var contact : Int,
-    var address : String
+    var contact : String,
+    var address : String,
+    var image   : String
 )
