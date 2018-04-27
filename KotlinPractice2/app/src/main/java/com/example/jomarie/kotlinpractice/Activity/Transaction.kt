@@ -1,10 +1,12 @@
 package com.example.jomarie.kotlinpractice.Activity
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
@@ -23,9 +25,15 @@ import android.widget.TextView
 import com.example.jomarie.kotlinpractice.ApiInterface
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException
+import com.google.android.gms.common.GooglePlayServicesRepairableException
+import com.google.android.gms.location.places.Place
+import com.google.android.gms.location.places.ui.PlacePicker
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.android.synthetic.main.activity_register.*
 import kotlinx.android.synthetic.main.activity_transaction.*
 import org.jetbrains.anko.*
 import org.jetbrains.anko.db.INTEGER
@@ -36,13 +44,15 @@ class Transaction : AppCompatActivity() {
         ApiInterface.create()
     }
 
-    private var progressDialog  : ProgressDialog?   = null
-    private var paymentDialog   : DialogInterface?  = null
-
+    private var progressDialog      : ProgressDialog?   = null
     private var mUserInfoList       : java.util.ArrayList<User>?    = null
     private var sharedPreferences   : SharedPreferences?            = null
-    private var disposable          : Disposable?                   = null
     private var user_id             : Int                           = 0
+
+    private var disposable = CompositeDisposable()
+    private var totalamount : String?   = null
+    private var quantityitem: Int       = 0
+    private val PLACE_PICKER_REQUEST    = 1
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,22 +62,25 @@ class Transaction : AppCompatActivity() {
         sharedPreferences = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
         user_id = sharedPreferences?.getInt("id", 0)!!
 
-        btnSaveTransac.setOnClickListener {
+        quantityitem    = intent.getIntExtra("itemQuantity", 0)
+        totalamount     = intent.getStringExtra("totalAmount")
+
+        btnProceedPay.setOnClickListener {
             if (
                     validateName(costumernamevalue.text.toString()) &&
                     validateEmail(costumeremailvalue.text.toString()) &&
                     validateMobile(costumercontactvalue.text.toString()) &&
                     validateAddress(costumeraddressvalue.text.toString())
                     ) {
-                progressDialog = indeterminateProgressDialog("Saving....")
-                progressDialog!!.show()
-                addTransaction( costumernamevalue.text.toString(),
-                                costumeremailvalue.text.toString(),
-                                costumercontactvalue.text.toString(),
-                                costumeraddressvalue.text.toString(),
-                                cardnovalue.text.toString().toInt(),
-                                expiryvalue.text.toString(),
-                                cvcvalue.text.toString().toInt())
+
+                startActivityForResult<PaymentActivity>(30,
+                                        "user_id" to user_id.toString(),
+                                                "name" to costumernamevalue.text.toString(),
+                                                "email" to costumeremailvalue.text.toString(),
+                                                "contact" to costumercontactvalue.text.toString(),
+                                                "address" to costumeraddressvalue.text.toString(),
+                                                "items" to quantityitem,
+                                                "totalamount" to totalamount.toString())
             }
         }
 
@@ -76,29 +89,30 @@ class Transaction : AppCompatActivity() {
             loginAlert()
         }
 
+        addLocation.setOnClickListener {
+            val builder : PlacePicker.IntentBuilder = PlacePicker.IntentBuilder()
+
+            try {
+                val intent = builder.build(this@Transaction)
+                startActivityForResult(intent, PLACE_PICKER_REQUEST)
+            }catch (e : GooglePlayServicesRepairableException){
+                e.printStackTrace()
+            } catch (e : GooglePlayServicesNotAvailableException){
+                e.printStackTrace()
+            }
+        }
+
     }
 
-    //saving Transaction
-    private fun addTransaction(name: String, email: String, contact: String, address: String, cardno: Int, expiry: String, cvccode: Int){
-        disposable = apiService.saveTransaction(user_id, name, email, contact, address, cardno, expiry, cvccode)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        {result->
-                            progressDialog?.dismiss()
-                            showMessage("Order Successful")},
-                        {error-> toast("Error ${error.localizedMessage}")}
-                )
-    }
     //login
     private fun login(username : String, password: String){
-        disposable = apiService.login(username, password)
+        disposable.add(apiService.login(username, password)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {result-> loginResponse(result)},
                         {error-> toast("Error ${error.localizedMessage}")}
-                )
+                ))
     }
     private fun loginResponse(response : Response) {
         if(response.response){
@@ -106,29 +120,26 @@ class Transaction : AppCompatActivity() {
             for(user in mUserInfoList!!){
                 val editor = sharedPreferences?.edit()
                 editor?.putBoolean("LOGGED", true)
+                editor?.putInt("id", user.id)
                 editor?.putString("name", user.name)
                 editor?.putString("email", user.email)
                 editor?.putString("contact", user.contact)
                 editor?.putString("address", user.address)
                 editor?.putString("image", user.image)
                 editor?.apply()
-                showDetails(user.name, user.email,user.contact,user.address)
+
+                startActivityForResult<PaymentActivity>(30,"user_id" to user.id,
+                        "name" to user.name,
+                        "email" to user.email,
+                        "contact" to user.contact,
+                        "address" to user.address,
+                        "items" to quantityitem,
+                        "totalamount" to totalamount.toString())
             }
         }else{
             longToast("Incorrect Username or Password")
         }
         progressDialog?.dismiss()
-    }
-
-    //Dialogs
-    private fun showMessage(message: String){
-        alert{
-            alert(message) {
-                yesButton {
-                    finish()
-                }
-            }.show()
-        }
     }
 
     private fun loginAlert(){
@@ -162,50 +173,6 @@ class Transaction : AppCompatActivity() {
         }
 
         dialog.show()
-    }
-
-    private fun showDetails(name: String, email : String, contact : String, address: String){
-        this.paymentDialog = alert {
-            isCancelable = false
-            title = "Payment Details"
-            customView {
-                verticalLayout {
-                    padding = dip(15)
-                    val cardno = editText{
-                        hint     = "card no."
-                        textSize = sp(10).toFloat()
-                        inputType = InputType.TYPE_CLASS_NUMBER
-                    }.lparams{ width = matchParent }
-                    val expiry = editText{
-                        hint      = "Expiry"
-                        textSize  = sp(10).toFloat()
-                    }.lparams{ width = matchParent }
-                    val cvccode = editText {
-                        hint      = "CVC Code"
-                        textSize  = sp(10).toFloat()
-                        inputType = InputType.TYPE_CLASS_NUMBER
-                    }.lparams{ width = matchParent }
-
-                    button("Submit"){
-                        onClick{
-                            progressDialog = indeterminateProgressDialog("Saving...")
-                            progressDialog!!.show()
-                            addTransaction(name,email,contact,address,cardno.text.toString().toInt(),expiry.text.toString(),cvccode.text.toString().toInt())
-                            this@Transaction.paymentDialog?.dismiss()
-                        }
-                    }.lparams{width = matchParent }
-                    button("Switch Account"){
-                        onClick{
-                            sharedPreferences!!.edit().clear().apply()
-                            this@Transaction.paymentDialog?.dismiss()
-                            loginAlert()
-                        }
-                    }.lparams{width = matchParent }
-
-
-                }
-            }
-        }.show()
     }
 
     //input validations
@@ -252,6 +219,24 @@ class Transaction : AppCompatActivity() {
         return true;
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(requestCode == PLACE_PICKER_REQUEST){
+            if(resultCode == RESULT_OK){
+                val place   : Place = PlacePicker.getPlace(data, this)
+                val address : String = String.format("%s", place.address)
+                costumeraddressvalue.setText(address)
+            }
+        }
+        if(requestCode == 30 && data != null) {
+            setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))
+            finish()
+        }
+    }
+
+    override fun onDestroy() {
+        disposable.clear()
+        super.onDestroy()
+    }
 
 
 }

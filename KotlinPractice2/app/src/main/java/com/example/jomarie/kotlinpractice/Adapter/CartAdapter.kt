@@ -7,10 +7,10 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import com.bumptech.glide.Glide
 import com.example.jomarie.kotlinpractice.Model.CartProduct
 import com.example.jomarie.kotlinpractice.R
-import com.squareup.picasso.Picasso
-import android.graphics.Typeface
+
 
 
 
@@ -33,7 +33,7 @@ class CartAdapter(var cartproduct: ArrayList<CartProduct>, val delegate: Delegat
         holder?.cartAmount?.text = "$ " + product.totalamount
         holder?.cartQty?.text = product.qty.toString()
 
-        Picasso.with(holder?.itemView!!.context).load("http://192.168.1.124:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
+        Glide.with(holder?.itemView!!.context).load("http://192.168.1.110:8080/Ecommerce/assets/images/" + product.image).into(holder?.productImage)
 
         holder?.btnAdd?.setOnClickListener(object : View.OnClickListener{
             override fun onClick(p0: View?) {

@@ -1,6 +1,5 @@
 package com.example.jomarie.kotlinpractice.Model
 
-import android.widget.ImageView
 
 /**
  * Created by jomarie on 4/6/2018.

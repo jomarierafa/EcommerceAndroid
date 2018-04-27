@@ -17,22 +17,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 
-            <ImageButton
+            <ImageView
                 android:id="@+id/button1"
-                android:layout_width="30dip"
-                android:layout_height="30dip"
-                android:background="@drawable/ic_cart" />
+                android:layout_width="30sp"
+                android:layout_height="30sp"
+                android:src="@drawable/ic_cart" />
         </RelativeLayout>
 
         <TextView
             android:id="@+id/badge_notification_1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="13dp"
+            android:layout_height="13dp"
             android:layout_alignRight="@id/relative_layout_item_count"
             android:background="@android:drawable/ic_notification_overlay"
-            android:text="27"
+            android:text="3"
+            android:gravity="center"
             android:textColor="#FFF"
-            android:textSize="7sp"
+            android:textSize="5sp"
             android:textStyle="bold" />
     </RelativeLayout>
+
 </RelativeLayout>

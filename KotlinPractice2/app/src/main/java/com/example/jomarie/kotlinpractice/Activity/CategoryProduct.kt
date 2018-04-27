@@ -27,6 +27,7 @@ import com.example.jomarie.kotlinpractice.Model.Product
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_category_product.*
@@ -45,12 +46,11 @@ class CategoryProduct : AppCompatActivity(), ProductAdapter.Delegate {
     lateinit var mRunnable          : Runnable
     private var mSwipeRefreshLayout : SwipeRefreshLayout?      = null
     private var lLayout             : GridLayoutManager?       = null
-    private var progressDialog      : ProgressDialog?          = null
     private var mAndroidArrayList   : ArrayList<Product>?      = null
     private var mAdapter            : ProductAdapter?          = null
 
     private var category   : String?        = null
-    private var disposable : Disposable?    = null
+    private var disposable = CompositeDisposable()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,9 +62,7 @@ class CategoryProduct : AppCompatActivity(), ProductAdapter.Delegate {
         mHandler = Handler()
 
         category = intent.getStringExtra("category")
-        progressDialog = indeterminateProgressDialog("Loading Data..")
-        progressDialog?.setCancelable(false)
-        progressDialog!!.show()
+
         loadProduct("", category.toString())
 
 
@@ -91,21 +89,22 @@ class CategoryProduct : AppCompatActivity(), ProductAdapter.Delegate {
 
 
     fun loadProduct(query : String, category : String){
-        disposable = apiService.getProductDetails(query, category)
+        disposable.add(apiService.getProductDetails(query, category)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {result-> handleResponse(result)},
                         {error-> toast("Error ${error.localizedMessage}")}
-                )
+                ))
     }
 
     private fun handleResponse(productList: List<Product>) {
         mAndroidArrayList = ArrayList(productList)
         mAdapter = ProductAdapter(mAndroidArrayList!!, this)
 
+        mAdapter?.num = mAndroidArrayList!!.size
         recycler.adapter = mAdapter
-        progressDialog?.dismiss()
+        categoryLoading.visibility = View.INVISIBLE
     }
 
     override fun onClickProduct(product: Product) {
@@ -147,6 +146,11 @@ class CategoryProduct : AppCompatActivity(), ProductAdapter.Delegate {
     override fun onBackPressed() {
         setResult(Activity.RESULT_OK, intent.putExtra("msg", "loadcounter"))
         super.onBackPressed()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        disposable.clear()
     }
 
 

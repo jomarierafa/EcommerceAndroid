@@ -18,22 +18,20 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.RelativeLayout
 import android.widget.TextView
-import com.example.jomarie.kotlinpractice.Adapter.CartAdapter
 import com.example.jomarie.kotlinpractice.Adapter.ProductAdapter
 import com.example.jomarie.kotlinpractice.ApiInterface
-import com.example.jomarie.kotlinpractice.Model.CartProduct
 import com.example.jomarie.kotlinpractice.Model.Product
 import com.example.jomarie.kotlinpractice.Model.User
 import com.example.jomarie.kotlinpractice.R
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_cart.*
 import kotlinx.android.synthetic.main.activity_category_product.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.notification_update_count_layout.*
 import org.jetbrains.anko.*
-import java.util.ArrayList
+import java.util.*
 
 class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
     private val apiService by lazy {
@@ -46,15 +44,16 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
 
     private var mUserInfoList       : java.util.ArrayList<User>?    = null
     private var sharedPreferences   : SharedPreferences?            = null
+    private var settings            : SharedPreferences?            = null
     private var progressDialog      : ProgressDialog?               = null
     private var mAndroidArrayList   : ArrayList<Product>?           = null
     private var mAdapter            : ProductAdapter?               = null
-    private var disposable          : Disposable?                   = null
+    private var disposable = CompositeDisposable()
 
     private var notification : RelativeLayout? = null
     private var itemcount    : TextView?       = null
     private var counter      : Int?            = 0
-    private var user_id      : Int?            = 0
+    private var cartCode     : String?         = ""
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -68,6 +67,15 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         }
     }
 
+    private fun generateRandom() : String {
+        val chars = "0123456789abcdeghijklmnopqrstuvwxyz"
+        var word = ""
+        for (i in 0..10){
+            word +=chars[Math.floor(Math.random() * chars.length).toInt()]
+        }
+        return word
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -75,12 +83,12 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         initRecyclerView()
         notification        = findViewById<RelativeLayout?>(R.id.badge_layout1)
         mSwipeRefreshLayout = findViewById<View>(R.id.swipeRefreshLayout) as SwipeRefreshLayout
-        mHandler            = Handler()
-        sharedPreferences   = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
 
-        progressDialog = indeterminateProgressDialog("Loading Data..")
-        progressDialog?.setCancelable(false)
-        progressDialog!!.show()
+        mHandler            = Handler()
+
+        sharedPreferences   = this.getSharedPreferences("userlogin", Context.MODE_PRIVATE)
+        settings            = getSharedPreferences("checked", 0)
+
         loadProduct("","rifle", rifleRecycler)
         loadProduct("","grenade", grenadeRecycler)
         loadCartCounter()
@@ -105,6 +113,12 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
             )
 
         }
+
+        //check if it is first time used
+        if(settings!!.getBoolean("first_time", true)){
+            settings!!.edit().putString("cartcode", generateRandom()).apply()
+            settings!!.edit().putBoolean("first_time", false).apply()
+        }
     }
 
     //declaring recyclerviews
@@ -120,33 +134,34 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
 
     // count items in cart
     private fun loadCartCounter(){
-        user_id    = sharedPreferences?.getInt("id", 0)
-        disposable = apiService.showCart(user_id!!)
+        cartCode    = settings?.getString("cartcode", "")
+        disposable.add(apiService.showCart(cartCode!!)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {result->   counter = result.size
                                     invalidateOptionsMenu()},
                         {error-> toast("Error ${error.localizedMessage}")}
-                )
+                ))
     }
 
     //load the available product
     private fun loadProduct(query : String, category : String, productrecycler: RecyclerView){
-        disposable = apiService.getProductDetails(query, category)
+        disposable.add(apiService.getProductDetails(query, category)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {result-> response(result, productrecycler)},
                         {error-> toast("Error ${error.localizedMessage}")}
-                )
+                ))
     }
     private fun response(productList: List<Product>, productrecycler : RecyclerView) {
         mAndroidArrayList = ArrayList(productList)
         mAdapter = ProductAdapter(mAndroidArrayList!!, this)
 
         productrecycler.adapter = mAdapter
-        progressDialog?.dismiss()
+        rifleLoading.visibility = View.INVISIBLE
+        grenadeLoadind.visibility = View.INVISIBLE
     }
 
     //product view
@@ -227,13 +242,13 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         dialog.show()
     }
     private fun login(username : String, password: String){
-        disposable = apiService.login(username, password)
+        disposable.add(apiService.login(username, password)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         {result-> loginResponse(result)},
                         {error-> toast("Error ${error.localizedMessage}")}
-                )
+                ))
     }
     private fun loginResponse(response : Response) {
         if(response.response){
@@ -255,4 +270,12 @@ class MainActivity : AppCompatActivity(), ProductAdapter.Delegate {
         }
         progressDialog?.dismiss()
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        disposable.clear()
+    }
+
+
+
 }

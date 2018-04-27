@@ -4,6 +4,7 @@
     package="com.example.jomarie.kotlinpractice">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -12,7 +13,8 @@
         android:roundIcon="@drawable/cartlogo"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        tools:ignore="ExtraText">
+        tools:ignore="ExtraText"
+        tools:replace="android:label">
         <activity android:name=".Activity.SplashScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,14 +27,16 @@
             android:label="Product" />
         <activity
             android:name=".Activity.Register"
-            android:label="Register"/>
+            android:label="Create An Account" />
         <activity
             android:name=".Activity.Cart"
             android:label="Shopping Cart"
             android:parentActivityName=".Activity.Register">
             >
         </activity>
-        <activity android:name=".Activity.Transaction" />
+        <activity
+            android:name=".Activity.Transaction"
+            android:label="Checkout" />
         <activity
             android:name=".Activity.ProductDetails"
             android:label="Product Details"
@@ -46,7 +50,18 @@
             android:name=".Activity.AccountProfile"
             android:label="Profile"
             android:parentActivityName=".Activity.CategoryProduct" />
-        <activity android:name=".Activity.MainActivity"></activity>
+        <activity android:name=".Activity.MainActivity" />
+        <activity android:name=".Activity.OderHistory" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBQPrfYRlxjzuKCTFFP3OmpoRgxJ2kQ-3k" />
+
+        <activity
+            android:name=".Activity.PaymentActivity"
+            android:label="Payment" />
+        <activity android:name=".Activity.OrderedProductsActivity"
+            android:theme="@style/AppTheme.PopMe"/>
     </application>
 
 </manifest>

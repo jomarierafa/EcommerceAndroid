@@ -30,21 +30,43 @@
                     android:orientation="vertical"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
-                    <TextView
-                        android:textStyle="italic"
-                        android:layout_marginStart="5dp"
-                        android:id="@+id/txtRifle"
+                    <LinearLayout
+                        android:paddingEnd="10dp"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/skranji"
-                        android:text="Rifle"
-                        android:textSize="20sp" />
-                    <android.support.v7.widget.RecyclerView
-                        android:layout_marginBottom="10dp"
-                        android:id="@+id/rifleRecycler"
+                        android:layout_height="wrap_content">
+                        <TextView
+                            android:layout_marginStart="5dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/skranji"
+                            android:text="Rifle"
+                            android:textSize="20sp" />
+                        <TextView
+                            android:fontFamily="@font/copse"
+                            android:id="@+id/txtRifle"
+                            android:textColor="@android:color/holo_blue_dark"
+                            android:gravity="end"
+                            android:textStyle="italic"
+                            android:textSize="15sp"
+                            android:text="See more..."
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                    <RelativeLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        />
+                        android:layout_height="match_parent">
+                        <android.support.v7.widget.RecyclerView
+                            android:layout_marginBottom="10dp"
+                            android:id="@+id/rifleRecycler"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            />
+                        <ProgressBar
+                            android:id="@+id/rifleLoading"
+                            android:layout_centerInParent="true"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp" />
+                    </RelativeLayout>
                 </LinearLayout>
             </android.support.v7.widget.CardView>
             <android.support.v7.widget.CardView
@@ -56,22 +78,43 @@
                     android:orientation="vertical"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
-
+                <LinearLayout
+                    android:paddingEnd="10dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
                     <TextView
-                        android:textStyle="italic"
                         android:layout_marginStart="5dp"
-                        android:id="@+id/txtGrenade"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/skranji"
                         android:text="Grenade"
                         android:textSize="20sp" />
-                    <android.support.v7.widget.RecyclerView
-                        android:layout_marginBottom="5dp"
-                        android:id="@+id/grenadeRecycler"
+                    <TextView
+                        android:fontFamily="@font/copse"
+                        android:id="@+id/txtGrenade"
+                        android:textColor="@android:color/holo_blue_dark"
+                        android:gravity="end"
+                        android:textStyle="italic"
+                        android:textSize="15sp"
+                        android:text="See more..."
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        />
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+                        <android.support.v7.widget.RecyclerView
+                            android:layout_marginBottom="5dp"
+                            android:id="@+id/grenadeRecycler"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            />
+                        <ProgressBar
+                            android:id="@+id/grenadeLoadind"
+                            android:layout_centerInParent="true"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp" />
+                    </RelativeLayout>
                 </LinearLayout>
             </android.support.v7.widget.CardView>
         </LinearLayout>

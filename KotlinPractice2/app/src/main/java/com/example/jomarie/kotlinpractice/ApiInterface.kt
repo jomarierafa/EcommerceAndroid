@@ -2,6 +2,8 @@ package com.example.jomarie.kotlinpractice
 
 import com.example.jomarie.kotlinpractice.Activity.Response
 import com.example.jomarie.kotlinpractice.Model.CartProduct
+import com.example.jomarie.kotlinpractice.Model.Order
+import com.example.jomarie.kotlinpractice.Model.OrderedProduct
 import com.example.jomarie.kotlinpractice.Model.Product
 import io.reactivex.Observable
 import okhttp3.OkHttpClient
@@ -27,11 +29,11 @@ interface ApiInterface {
     @FormUrlEncoded
     @POST("costumer/addToCart")
     fun addToCart(@Field("product_id") product_id : Int,
-                  @Field("user_id")    user_id    : Int) : Observable<Response>
+                  @Field("cartCode")   cartCode   : String) : Observable<Response>
 
     @FormUrlEncoded
     @POST("costumer/showCart")
-    fun showCart(@Field("user_id") user_id: Int): Observable<List<CartProduct>>
+    fun showCart(@Field("cartCode") cartCode: String): Observable<List<CartProduct>>
 
     @FormUrlEncoded
     @POST("costumer/removeFromCart")
@@ -50,13 +52,16 @@ interface ApiInterface {
     @FormUrlEncoded
     @POST("costumer/addTransaction")
     fun saveTransaction(@Field("user_id")  user_id : Int,
+                        @Field("cartCode") cartCode: String,
                         @Field("name")     name    : String,
                         @Field("email")    email   : String,
                         @Field("contact")  contact : String,
                         @Field("address")  address : String,
                         @Field("cardno")   cardno  : Int,
                         @Field("expiry")   expiry  : String,
-                        @Field("cvccode")  cvccode : Int) : Observable<Response>
+                        @Field("cvccode")  cvccode : Int,
+                        @Field("quantity") quantity: Int,
+                        @Field("amount")   amount  : String) : Observable<Response>
 
     @FormUrlEncoded
     @POST("costumer/registerUser")
@@ -64,7 +69,7 @@ interface ApiInterface {
                      @Field("username")    username: String,
                      @Field("password")    password: String,
                      @Field("email")       email   : String,
-                     @Field("contact")     contact : Int,
+                     @Field("contact")     contact : String,
                      @Field("address")     address : String,
                      @Field("image")       image   : String) :Observable<Response>
 
@@ -82,8 +87,17 @@ interface ApiInterface {
                       @Field("address") address: String) : Observable<Response>
 
 
+    @FormUrlEncoded
+    @POST("costumer/getTransaction")
+    fun getTransaction(@Field("user_id") user_id : Int) : Observable<List<Order>>
+
+    @FormUrlEncoded
+    @POST("costumer/orderedProduct")
+    fun getOrderedProduct(@Field("transac_num") transac_num : String) : Observable<List<OrderedProduct>>
+
+
     companion object Factory {
-        val BASE_URL = "http://192.168.1.124:8080/Ecommerce/"
+        val BASE_URL = "http://192.168.1.110:8080/Ecommerce/"
         fun create(): ApiInterface {
             val retrofit = Retrofit.Builder()
                     .baseUrl(BASE_URL)
